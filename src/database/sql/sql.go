@@ -2817,6 +2817,26 @@ func rowsColumnInfoSetupConnLocked(rowsi driver.Rows) []*ColumnType {
 	return list
 }
 
+type RowScanner interface {
+	Scan(src []interface{}) error
+}
+
+func (rs *Rows) ScanCustom(dest RowScanner) error {
+	rs.closemu.RLock()
+	if rs.closed {
+		rs.closemu.RUnlock()
+		return errors.New("sql: Rows are closed")
+	}
+	rs.closemu.RUnlock()
+
+	if rs.lastcols == nil {
+		return errors.New("sql: Scan called without calling Next")
+	}
+	return dest.Scan(rs.lastcols)
+}
+
+
+
 // Scan copies the columns in the current row into the values pointed
 // at by dest. The number of values in dest must be the same as the
 // number of columns in Rows.
